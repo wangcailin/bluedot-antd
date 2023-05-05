@@ -9,6 +9,22 @@ export default defineConfig({
   },
   base: '/bluedot-antd',
   publicPath: '/bluedot-antd/',
+  define: {
+    RSA_PUBLIC_KEY: `-----BEGIN PUBLIC KEY-----
+MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAuUibR4f10vlfEnhrjv3r
+WfgPuzDuGubFBqdk+qPREv2kX6c3wJBDRUPEN2av0DQTO1kZRVlRLrQ6nxI0rHEl
+7hBWk6SXiIbUR6xuS1u/7P4L2B9u3g5XxEh/Ow71ZK0N2DjthiNHI++9I80BmNwf
+5mCM5dR80VB29C64ciFyba2sVUkoO91R93ZvKgSbgJR08YMcB2g2S9ohdPSl1JIy
+W6LkSTrlU2j20k4HCKtc3xgRu3HhRhW40LCYMjJpgLk4JpdbLK2lKF3HUpAX9qnW
+4ATXlpF8d45nrLPGMLnXD+W12TX3ZZMX1VJM68V+uYzSDqaK6fPeJNgPKRV3+zpL
+GKO5I9rjxxPpkcndXJGJU/roTuAUh2AZrkH+EAfnJ+wJs+TNiLYH2wfEccF+sdH+
+sWEaYMtdIkBbYoEjK9cqtBnKCCI4PBhpnc6JK0qOJtGOy2Tyc6zzI/VZm93PHu7v
+Z6QuJAiL3kkUwVOvql4/flygVBU5H/r/9wBMVxK3hvEkaegnhYd8xjmLRJcu3oWG
+CQgvvprQiir5iLNP1KEaC3OrbtRyZoA8HDTZUsXsIB2VwLrx4H80GImlgKtToeqH
+XfoU2n48r7bIopzgIrRZS5qG2FdvWW/7KaZaCkswJj5FxvbO9tMIPrXkOVelqmwh
+2m6l9+1ibP4EH+OKzWuZAZsCAwEAAQ==
+-----END PUBLIC KEY-----`,
+  },
   metas: [
     {
       name: 'referrer',

@@ -1,6 +1,6 @@
 {
   "name": "@bluedot-tech/bluedot-antd",
-  "version": "3.0.1",
+  "version": "3.1.1",
   "description": "bluedot-antd",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",

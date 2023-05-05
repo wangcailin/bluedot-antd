@@ -13,17 +13,17 @@
 import CryptoJS from 'crypto-js';
 import JSEncrypt from 'jsencrypt';
 
-export default class Crypt {
+export default class Crypto {
   iv;
   key;
-  publicKey: string = PUBLICKEY;
+  publicKey: string = RSA_PUBLIC_KEY;
 
   constructor(iv?: string, key?: string) {
     this.iv = iv ?? CryptoJS.lib.WordArray.random(128 / 16).toString(CryptoJS.enc.Hex);
     this.key = key ?? CryptoJS.lib.WordArray.random(128 / 8).toString(CryptoJS.enc.Hex);
   }
 
-  aes_encrypt(text: string) {
+  aes_encrypt(text?: string) {
     if (text) {
       try {
         const encoded = CryptoJS.AES.encrypt(text, CryptoJS.enc.Utf8.parse(this.key), {
@@ -39,7 +39,7 @@ export default class Crypt {
     return '';
   }
 
-  aes_decrypt = (text: string) => {
+  aes_decrypt = (text?: string) => {
     if (text) {
       try {
         const decode = CryptoJS.AES.decrypt(text, CryptoJS.enc.Utf8.parse(this.key), {
