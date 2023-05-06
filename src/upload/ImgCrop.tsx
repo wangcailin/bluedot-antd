@@ -1,80 +1,106 @@
-import React, { useEffect, useState } from 'react';
-import { Upload, Modal, Spin, Button } from 'antd';
-import { LoadingOutlined, PlusOutlined, EyeOutlined, DeleteOutlined } from '@ant-design/icons';
+import type { UploadProps } from 'antd';
+import { message, Modal, Upload } from 'antd';
 import ImgCrop from 'antd-img-crop';
-import './ImgCrop.less';
-import { UploadImgCropProps } from './interface';
+import React, { useEffect, useState } from 'react';
+import {
+  getOSSData,
+  getUploadExtraData,
+  getUploadFileName,
+  OSSDataType,
+} from './utils';
 
 export default ({
   maxLength = 1,
   value,
   onChange,
-  children,
+  children = '+ Upload',
   uploadProps,
   showImgCrop = true,
   imgCropProps,
-  appSource = 'tmp',
-}: UploadImgCropProps) => {
-  const [loading, setLoading] = useState(false);
+}: any) => {
   const [fileList, handleFileList] = useState<any[]>([]);
   const [previewVisible, handlePreviewVisible] = useState(false);
   const [previewImage, handlePreviewImage] = useState<string>('');
+  const [OSSData, setOSSData] = useState<OSSDataType>();
+
+  const init = async () => {
+    try {
+      const result = await getOSSData();
+      setOSSData(result);
+    } catch (error) {
+      message.error(error);
+    }
+  };
 
   useEffect(() => {
+    init();
     if (value) {
       if (value instanceof Array) {
-        handleFileList(value);
-      } else if (typeof value === 'string') {
-        handleFileList([{
-          url: value,
-          name: 'rc-upload-1652250813804-2',
+        const fileListData = value.map((item: string) => ({
+          url: item,
           status: 'done',
-          uid: 'rc-upload-1652250813804-2',
-        }]);
+        }));
+        handleFileList(fileListData);
+      } else if (typeof value === 'string') {
+        handleFileList([
+          {
+            url: value,
+            status: 'done',
+          },
+        ]);
       }
     }
   }, []);
+
+  const getExtraData: UploadProps['data'] = (file) => {
+    if (!OSSData) return {};
+    return getUploadExtraData(OSSData, file);
+  };
+
+  const beforeUpload: UploadProps['beforeUpload'] = async (file) => {
+    if (!OSSData) return false;
+    // @ts-ignore
+    file.url = `${OSSData.host}/${OSSData.dir}/${getUploadFileName(file)}`;
+    return file;
+  };
 
   const handlePreview = async (file: any) => {
     handlePreviewImage(file.url || file.preview);
     handlePreviewVisible(true);
   };
 
-  const handleOnChange = (data?: any) => {
+  const handleOnChange: UploadProps['onChange'] = (data?: any) => {
     const { fileList } = data;
-    if (maxLength == 1 && fileList.length) {
+    if (maxLength === 1 && fileList.length) {
       const currentFileList = fileList[0];
-      currentFileList.url = currentFileList?.response?.url || currentFileList.url || null;
-      if (currentFileList.status === 'uploading') {
-        setLoading(true);
-      };
+
       // 只有图片上传完毕后在push到form中
       if (currentFileList.status === 'done') {
-        setLoading(false);
-        onChange?.(currentFileList.response.url);
-      };
+        onChange?.(currentFileList.url);
+      }
       handleFileList([currentFileList]);
     } else if (fileList.length) {
       let allDone = true;
+
       const currentFileList = fileList.map((item: any) => {
-        item.url = item?.response?.url || item.url || null
         if (item?.status !== 'done') {
           allDone = false;
-        };
+        }
         return item;
       });
       if (allDone) {
-        onChange(currentFileList);
-      };
+        const urlList = currentFileList.map((item: any) => item.url);
+        onChange?.(urlList);
+      }
       handleFileList(currentFileList);
     } else {
       onChange(null);
       handleFileList([]);
-    };
+    }
   };
 
   const handleOnRemove = (file: any) => {
-    const files = fileList.filter(v => v.url !== file.url);
+    const files = fileList.filter((v) => v.url !== file.url);
     if (onChange) {
       handleFileList(files);
     }
@@ -84,72 +110,29 @@ export default ({
 
   const initUploadProps: any = {
     listType: 'picture-card',
-    data: {
-      app_source: appSource,
-    },
-    showUploadList: maxLength == 1 ? false : true,
+    action: OSSData?.host,
+    data: getExtraData,
     maxCount: maxLength,
     accept: 'image/*',
-    ...uploadProps,
     fileList: fileList,
     onChange: handleOnChange,
     onPreview: handlePreview,
     onRemove: handleOnRemove,
-  };
-
-  const uploadButton = (
-    <div>
-      {loading ? <LoadingOutlined /> : <PlusOutlined />}
-      <div style={{ marginTop: 8 }}>{children ? children : 'Upload'}</div>
-    </div>
-  );
-
-  const handelChildren = () => {
-    if (!initUploadProps.showUploadList) {
-      const imageUrl = fileList[0]?.url || value;
-      return <div className="bluedot-upload-content">
-        {
-          imageUrl ?
-            <Spin spinning={loading}>
-              <div onClick={(event) => event.stopPropagation()}>
-                <img src={imageUrl} style={{ maxWidth: 86, maxHeight: 86, borderRadius: imgCropProps?.shape == 'round' ? '50%' : '0' }} />
-                <div className="bluedot-active">
-                  <div onClick={() => handlePreview({ url: imageUrl })}>
-                    <EyeOutlined style={{ fontSize: 16, color: '#fff' }} />
-                  </div>
-                  <Button
-                    type="text"
-                    icon={<DeleteOutlined style={{ fontSize: 16, color: '#fff' }} />}
-                    onClick={() => handleOnChange({ fileList: [] })}
-                  />
-                </div>
-              </div>
-            </Spin>
-            : uploadButton
-        }
-      </div>
-    } else if (children && fileList.length < maxLength) {
-      return children;
-    } else if (fileList.length < maxLength) {
-      return uploadButton;
-    };
+    beforeUpload,
+    ...uploadProps,
   };
 
   return (
     <>
-      {
-        showImgCrop ? (
-          <ImgCrop rotate {...imgCropProps}>
-            <Upload {...initUploadProps}>
-              {handelChildren()}
-            </Upload>
-          </ImgCrop>
-        ) : (
+      {showImgCrop ? (
+        <ImgCrop rotationSlider quality={1} {...imgCropProps}>
           <Upload {...initUploadProps}>
-            {handelChildren()}
+            {fileList.length < maxLength && children}
           </Upload>
-        )
-      }
+        </ImgCrop>
+      ) : (
+        <Upload {...initUploadProps}>{children}</Upload>
+      )}
 
       <Modal open={previewVisible} footer={null} onCancel={handleCancel}>
         <img alt="example" style={{ width: '100%' }} src={previewImage} />
