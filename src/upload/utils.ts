@@ -1,5 +1,5 @@
+import { request } from '@umijs/max';
 import type { UploadFile } from 'antd/es/upload/interface';
-import { request } from 'umi';
 
 export interface OSSOptions {
   region: string;
@@ -45,6 +45,15 @@ export const getUploadExtraData = (OSSData: OSSDataType, file: UploadFile) => {
     Signature: OSSData?.signature,
   };
 };
+
+// export const transformFileData = (file: UploadFile) => {
+//   return {
+//     key: `${OSSData?.dir}/${getUploadFileName(file)}`,
+//     OSSAccessKeyId: OSSData?.accessId,
+//     policy: OSSData?.policy,
+//     Signature: OSSData?.signature,
+//   };
+// };
 
 // const oss = await getUploadUrl();
 // export const OSS = {

@@ -1,5 +1,15 @@
 import { UploadOutlined } from '@ant-design/icons';
-import type { UploadProps } from 'antd';
+import type { DragEndEvent } from '@dnd-kit/core';
+import { DndContext, PointerSensor, useSensor } from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { css } from '@emotion/css';
+import type { UploadFile, UploadProps } from 'antd';
 import { Button, message, Upload } from 'antd';
 import React, { useEffect, useState } from 'react';
 import {
@@ -8,6 +18,60 @@ import {
   getUploadFileName,
   OSSDataType,
 } from './utils';
+
+interface DraggableUploadListItemProps {
+  originNode: React.ReactElement<
+    any,
+    string | React.JSXElementConstructor<any>
+  >;
+  file: UploadFile<any>;
+}
+
+const DraggableUploadListItem = ({
+  originNode,
+  file,
+}: DraggableUploadListItemProps) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: file.uid,
+  });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    cursor: 'move',
+  };
+
+  // prevent preview event when drag end
+  const className = isDragging
+    ? css`
+        a {
+          pointer-events: none;
+        }
+      `
+    : '';
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={className}
+      {...attributes}
+      {...listeners}
+    >
+      {/* hide error tooltip when dragging */}
+      {file.status === 'error' && isDragging
+        ? originNode.props.children
+        : originNode}
+    </div>
+  );
+};
 
 export default ({
   maxLength = 1,
@@ -22,6 +86,7 @@ export default ({
   uploadProps,
 }: any) => {
   const [fileList, handleFileList] = useState<any[]>([]);
+
   const [OSSData, setOSSData] = useState<OSSDataType>();
 
   const init = async () => {
@@ -92,6 +157,20 @@ export default ({
     }
   };
 
+  const sensor = useSensor(PointerSensor, {
+    activationConstraint: { distance: 10 },
+  });
+
+  const onDragEnd = ({ active, over }: DragEndEvent) => {
+    if (active.id !== over?.id) {
+      const activeIndex = fileList.findIndex((i) => i.uid === active.id);
+      const overIndex = fileList.findIndex((i) => i.uid === over?.id);
+      const newFileList = arrayMove(fileList, activeIndex, overIndex);
+      handleFileList(newFileList);
+      onChange?.(newFileList);
+    }
+  };
+
   const initUploadProps: any = {
     action: OSSData?.host,
     data: getExtraData,
@@ -101,14 +180,30 @@ export default ({
     onRemove: handleOnRemove,
     beforeUpload,
     accept,
+    itemRender: (originNode, file) => (
+      <DraggableUploadListItem originNode={originNode} file={file} />
+    ),
     ...uploadProps,
   };
 
   return (
     <>
-      <Upload {...initUploadProps}>
-        {fileList.length < maxLength && children}
-      </Upload>
+      {maxLength === 1 ? (
+        <Upload {...initUploadProps}>
+          {fileList.length < maxLength && children}
+        </Upload>
+      ) : (
+        <DndContext sensors={[sensor]} onDragEnd={onDragEnd}>
+          <SortableContext
+            items={fileList.map((i) => i.uid)}
+            strategy={verticalListSortingStrategy}
+          >
+            <Upload {...initUploadProps}>
+              {fileList.length < maxLength && children}
+            </Upload>
+          </SortableContext>
+        </DndContext>
+      )}
     </>
   );
 };
