@@ -39,7 +39,7 @@ const DraggableUploadListItem = ({
     transition,
     isDragging,
   } = useSortable({
-    id: file.uid,
+    id: file.url,
   });
 
   const style: React.CSSProperties = {
@@ -163,8 +163,8 @@ export default ({
 
   const onDragEnd = ({ active, over }: DragEndEvent) => {
     if (active.id !== over?.id) {
-      const activeIndex = fileList.findIndex((i) => i.uid === active.id);
-      const overIndex = fileList.findIndex((i) => i.uid === over?.id);
+      const activeIndex = fileList.findIndex((i) => i.url === active.id);
+      const overIndex = fileList.findIndex((i) => i.url === over?.id);
       const newFileList = arrayMove(fileList, activeIndex, overIndex);
       handleFileList(newFileList);
       onChange?.(newFileList);
@@ -195,7 +195,7 @@ export default ({
       ) : (
         <DndContext sensors={[sensor]} onDragEnd={onDragEnd}>
           <SortableContext
-            items={fileList.map((i) => i.uid)}
+            items={fileList.map((i) => i.url)}
             strategy={verticalListSortingStrategy}
           >
             <Upload {...initUploadProps}>

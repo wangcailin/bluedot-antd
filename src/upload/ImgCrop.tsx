@@ -1,4 +1,14 @@
-import type { UploadProps } from 'antd';
+import type { DragEndEvent } from '@dnd-kit/core';
+import { DndContext, PointerSensor, useSensor } from '@dnd-kit/core';
+import {
+  arrayMove,
+  rectSortingStrategy,
+  SortableContext,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { css } from '@emotion/css';
+import type { UploadFile, UploadProps } from 'antd';
 import { message, Modal, Upload } from 'antd';
 import ImgCrop from 'antd-img-crop';
 import React, { useEffect, useState } from 'react';
@@ -8,6 +18,60 @@ import {
   getUploadFileName,
   OSSDataType,
 } from './utils';
+
+interface DraggableUploadListItemProps {
+  originNode: React.ReactElement<
+    any,
+    string | React.JSXElementConstructor<any>
+  >;
+  file: UploadFile<any>;
+}
+
+const DraggableUploadListItem = ({
+  originNode,
+  file,
+}: DraggableUploadListItemProps) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: file.url,
+  });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    cursor: 'move',
+  };
+
+  // prevent preview event when drag end
+  const className = isDragging
+    ? css`
+        a {
+          pointer-events: none;
+        }
+      `
+    : '';
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={className}
+      {...attributes}
+      {...listeners}
+    >
+      {/* hide error tooltip when dragging */}
+      {file.status === 'error' && isDragging
+        ? originNode.props.children
+        : originNode}
+    </div>
+  );
+};
 
 export default ({
   maxLength = 1,
@@ -108,6 +172,23 @@ export default ({
 
   const handleCancel = () => handlePreviewVisible(false);
 
+  const sensor = useSensor(PointerSensor, {
+    activationConstraint: { distance: 10 },
+  });
+
+  const onDragEnd = ({ active, over }: DragEndEvent) => {
+    if (active.id !== over?.id) {
+      const activeIndex = fileList.findIndex((i) => i.url === active.id);
+      const overIndex = fileList.findIndex((i) => i.url === over?.id);
+      const newFileList = arrayMove(fileList, activeIndex, overIndex);
+      handleFileList(newFileList);
+      const urlList = newFileList.map((item: any) => item.url);
+      onChange?.(urlList);
+    }
+  };
+
+  console.log(fileList);
+
   const initUploadProps: any = {
     listType: 'picture-card',
     action: OSSData?.host,
@@ -119,17 +200,27 @@ export default ({
     onPreview: handlePreview,
     onRemove: handleOnRemove,
     beforeUpload,
+    itemRender: (originNode, file) => (
+      <DraggableUploadListItem originNode={originNode} file={file} />
+    ),
     ...uploadProps,
   };
 
   return (
     <>
       {showImgCrop ? (
-        <ImgCrop rotationSlider quality={1} {...imgCropProps}>
-          <Upload {...initUploadProps}>
-            {fileList.length < maxLength && children}
-          </Upload>
-        </ImgCrop>
+        <DndContext sensors={[sensor]} onDragEnd={onDragEnd}>
+          <SortableContext
+            items={fileList.map((i) => i.url)}
+            strategy={rectSortingStrategy}
+          >
+            <ImgCrop rotationSlider quality={1} {...imgCropProps}>
+              <Upload {...initUploadProps}>
+                {fileList.length < maxLength && children}
+              </Upload>
+            </ImgCrop>
+          </SortableContext>
+        </DndContext>
       ) : (
         <Upload {...initUploadProps}>{children}</Upload>
       )}
