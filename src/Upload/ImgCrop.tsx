@@ -1,23 +1,18 @@
-import { UploadOutlined } from '@ant-design/icons';
 import type { DragEndEvent } from '@dnd-kit/core';
 import { DndContext, PointerSensor, useSensor } from '@dnd-kit/core';
 import {
-  arrayMove,
   SortableContext,
+  arrayMove,
+  rectSortingStrategy,
   useSortable,
-  verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { css } from '@emotion/css';
 import type { UploadFile, UploadProps } from 'antd';
-import { Button, message, Upload } from 'antd';
+import { Modal, Upload } from 'antd';
+import ImgCrop from 'antd-img-crop';
 import React, { useEffect, useState } from 'react';
-import {
-  getOSSData,
-  getUploadExtraData,
-  getUploadFileName,
-  OSSDataType,
-} from './utils';
+import { customRequest } from '../utils/oss';
 
 interface DraggableUploadListItemProps {
   originNode: React.ReactElement<
@@ -74,59 +69,52 @@ const DraggableUploadListItem = ({
 };
 
 export default ({
-  maxLength = 1,
-  accept,
+  maxCount = 1,
   value,
   onChange,
-  children = (
-    <>
-      <Button icon={<UploadOutlined />}>Click to Upload</Button>
-    </>
-  ),
+  children = '+ Upload',
   uploadProps,
+  showImgCrop = true,
+  imgCropProps,
 }: any) => {
   const [fileList, handleFileList] = useState<any[]>([]);
-
-  const [OSSData, setOSSData] = useState<OSSDataType>();
-
-  const init = async () => {
-    try {
-      const result = await getOSSData();
-      setOSSData(result);
-    } catch (error) {
-      message.error(error);
-    }
-  };
+  const [previewVisible, handlePreviewVisible] = useState(false);
+  const [previewImage, handlePreviewImage] = useState<string>('');
 
   useEffect(() => {
-    init();
     if (value) {
       if (value instanceof Array) {
-        handleFileList(value);
-      } else if (typeof value === 'object') {
-        handleFileList([value]);
+        const fileListData = value.map((item: string) => ({
+          url: item,
+          status: 'done',
+        }));
+        handleFileList(fileListData);
+      } else if (typeof value === 'string') {
+        handleFileList([
+          {
+            url: value,
+            status: 'done',
+          },
+        ]);
       }
     }
   }, []);
 
-  const getExtraData: UploadProps['data'] = (file) => {
-    if (!OSSData) return {};
-    return getUploadExtraData(OSSData, file);
+  const handlePreview = async (file: any) => {
+    handlePreviewImage(file.url || file.preview);
+    handlePreviewVisible(true);
   };
 
-  const beforeUpload: UploadProps['beforeUpload'] = async (file) => {
-    if (!OSSData) return false;
-    // @ts-ignore
-    file.url = `${OSSData.host}/${OSSData.dir}/${getUploadFileName(file)}`;
-    return file;
-  };
+  const handleOnChange: UploadProps['onChange'] = (data?: any) => {
+    const { fileList } = data;
+    if (maxCount === 1 && fileList.length) {
+      const currentFileList = fileList[0];
 
-  const handleOnChange: UploadProps['onChange'] = ({ file, fileList }) => {
-    if (maxLength === 1 && file) {
-      if (file.status === 'done') {
-        onChange?.(file);
+      // 只有图片上传完毕后在push到form中
+      if (currentFileList.status === 'done') {
+        onChange?.(currentFileList.url);
       }
-      handleFileList(fileList);
+      handleFileList([currentFileList]);
     } else if (fileList.length) {
       let allDone = true;
 
@@ -137,7 +125,8 @@ export default ({
         return item;
       });
       if (allDone) {
-        onChange?.(currentFileList);
+        const urlList = currentFileList.map((item: any) => item.url);
+        onChange?.(urlList);
       }
       handleFileList(currentFileList);
     } else {
@@ -147,15 +136,13 @@ export default ({
   };
 
   const handleOnRemove = (file: any) => {
-    if (maxLength === 1) {
-      onChange?.(null);
-      handleFileList([]);
-    } else {
-      const files = fileList.filter((v) => v.url !== file.url);
-      onChange?.(files);
-      handleFileList([files]);
+    const files = fileList.filter((v) => v.url !== file.url);
+    if (onChange) {
+      handleFileList(files);
     }
   };
+
+  const handleCancel = () => handlePreviewVisible(false);
 
   const sensor = useSensor(PointerSensor, {
     activationConstraint: { distance: 10 },
@@ -167,43 +154,65 @@ export default ({
       const overIndex = fileList.findIndex((i) => i.url === over?.id);
       const newFileList = arrayMove(fileList, activeIndex, overIndex);
       handleFileList(newFileList);
-      onChange?.(newFileList);
+      const urlList = newFileList.map((item: any) => item.url);
+      onChange?.(urlList);
     }
   };
 
   const initUploadProps: any = {
-    action: OSSData?.host,
-    data: getExtraData,
-    maxCount: maxLength,
-    fileList,
+    listType: 'picture-card',
+    customRequest,
+    maxCount: maxCount,
+    accept: 'image/*',
+    fileList: fileList,
     onChange: handleOnChange,
+    onPreview: handlePreview,
     onRemove: handleOnRemove,
-    beforeUpload,
-    accept,
     itemRender: (originNode, file) => (
       <DraggableUploadListItem originNode={originNode} file={file} />
     ),
     ...uploadProps,
   };
 
+  const ImgCropDom = () => {
+    if (maxCount === 1) {
+      return (
+        <ImgCrop rotationSlider quality={1} {...imgCropProps}>
+          <Upload {...initUploadProps}>
+            {fileList.length < maxCount && children}
+          </Upload>
+        </ImgCrop>
+      );
+    }
+    return (
+      <DndContext sensors={[sensor]} onDragEnd={onDragEnd}>
+        <SortableContext
+          items={fileList.map((i) => i.url)}
+          strategy={rectSortingStrategy}
+        >
+          <ImgCrop rotationSlider quality={1} {...imgCropProps}>
+            <Upload {...initUploadProps}>
+              {fileList.length < maxCount && children}
+            </Upload>
+          </ImgCrop>
+        </SortableContext>
+      </DndContext>
+    );
+  };
+
   return (
     <>
-      {maxLength === 1 ? (
-        <Upload {...initUploadProps}>
-          {fileList.length < maxLength && children}
-        </Upload>
+      {showImgCrop ? (
+        ImgCropDom()
       ) : (
-        <DndContext sensors={[sensor]} onDragEnd={onDragEnd}>
-          <SortableContext
-            items={fileList.map((i) => i.url)}
-            strategy={verticalListSortingStrategy}
-          >
-            <Upload {...initUploadProps}>
-              {fileList.length < maxLength && children}
-            </Upload>
-          </SortableContext>
-        </DndContext>
+        <Upload {...initUploadProps}>
+          {fileList.length < maxCount && children}
+        </Upload>
       )}
+
+      <Modal open={previewVisible} footer={null} onCancel={handleCancel}>
+        <img alt="example" style={{ width: '100%' }} src={previewImage} />
+      </Modal>
     </>
   );
 };

@@ -3,16 +3,6 @@
 [![NPM version](https://img.shields.io/npm/v/@bluedot-tech/bluedot-antd.svg?style=flat)](https://npmjs.org/package/@bluedot-tech/bluedot-antd)
 [![NPM downloads](http://img.shields.io/npm/dm/@bluedot-tech/bluedot-antd.svg?style=flat)](https://npmjs.org/package/@bluedot-tech/bluedot-antd)
 
-bluedot-antd
-
-## Usage
-
-TODO
-
-## Options
-
-TODO
-
 ## Development
 
 ```bash
@@ -35,6 +25,4 @@ $ pnpm run docs:build
 $ pnpm run doctor
 ```
 
-## LICENSE
-
-MIT
+## Features

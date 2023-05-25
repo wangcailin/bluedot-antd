@@ -1,23 +1,18 @@
+import { UploadOutlined } from '@ant-design/icons';
 import type { DragEndEvent } from '@dnd-kit/core';
 import { DndContext, PointerSensor, useSensor } from '@dnd-kit/core';
 import {
-  arrayMove,
-  rectSortingStrategy,
   SortableContext,
+  arrayMove,
   useSortable,
+  verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { css } from '@emotion/css';
 import type { UploadFile, UploadProps } from 'antd';
-import { message, Modal, Upload } from 'antd';
-import ImgCrop from 'antd-img-crop';
+import { Button, Upload } from 'antd';
 import React, { useEffect, useState } from 'react';
-import {
-  getOSSData,
-  getUploadExtraData,
-  getUploadFileName,
-  OSSDataType,
-} from './utils';
+import { customRequest } from '../utils/oss';
 
 interface DraggableUploadListItemProps {
   originNode: React.ReactElement<
@@ -74,75 +69,35 @@ const DraggableUploadListItem = ({
 };
 
 export default ({
-  maxLength = 1,
+  maxCount = 1,
+  accept,
   value,
   onChange,
-  children = '+ Upload',
+  children = (
+    <>
+      <Button icon={<UploadOutlined />}>Click to Upload</Button>
+    </>
+  ),
   uploadProps,
-  showImgCrop = true,
-  imgCropProps,
 }: any) => {
   const [fileList, handleFileList] = useState<any[]>([]);
-  const [previewVisible, handlePreviewVisible] = useState(false);
-  const [previewImage, handlePreviewImage] = useState<string>('');
-  const [OSSData, setOSSData] = useState<OSSDataType>();
-
-  const init = async () => {
-    try {
-      const result = await getOSSData();
-      setOSSData(result);
-    } catch (error) {
-      message.error(error);
-    }
-  };
 
   useEffect(() => {
-    init();
     if (value) {
       if (value instanceof Array) {
-        const fileListData = value.map((item: string) => ({
-          url: item,
-          status: 'done',
-        }));
-        handleFileList(fileListData);
-      } else if (typeof value === 'string') {
-        handleFileList([
-          {
-            url: value,
-            status: 'done',
-          },
-        ]);
+        handleFileList(value);
+      } else if (typeof value === 'object') {
+        handleFileList([value]);
       }
     }
   }, []);
 
-  const getExtraData: UploadProps['data'] = (file) => {
-    if (!OSSData) return {};
-    return getUploadExtraData(OSSData, file);
-  };
-
-  const beforeUpload: UploadProps['beforeUpload'] = async (file) => {
-    if (!OSSData) return false;
-    // @ts-ignore
-    file.url = `${OSSData.host}/${OSSData.dir}/${getUploadFileName(file)}`;
-    return file;
-  };
-
-  const handlePreview = async (file: any) => {
-    handlePreviewImage(file.url || file.preview);
-    handlePreviewVisible(true);
-  };
-
-  const handleOnChange: UploadProps['onChange'] = (data?: any) => {
-    const { fileList } = data;
-    if (maxLength === 1 && fileList.length) {
-      const currentFileList = fileList[0];
-
-      // 只有图片上传完毕后在push到form中
-      if (currentFileList.status === 'done') {
-        onChange?.(currentFileList.url);
+  const handleOnChange: UploadProps['onChange'] = ({ file, fileList }) => {
+    if (maxCount === 1 && file) {
+      if (file.status === 'done') {
+        onChange?.(file);
       }
-      handleFileList([currentFileList]);
+      handleFileList(fileList);
     } else if (fileList.length) {
       let allDone = true;
 
@@ -153,8 +108,7 @@ export default ({
         return item;
       });
       if (allDone) {
-        const urlList = currentFileList.map((item: any) => item.url);
-        onChange?.(urlList);
+        onChange?.(currentFileList);
       }
       handleFileList(currentFileList);
     } else {
@@ -164,13 +118,15 @@ export default ({
   };
 
   const handleOnRemove = (file: any) => {
-    const files = fileList.filter((v) => v.url !== file.url);
-    if (onChange) {
-      handleFileList(files);
+    if (maxCount === 1) {
+      onChange?.(null);
+      handleFileList([]);
+    } else {
+      const files = fileList.filter((v) => v.url !== file.url);
+      onChange?.(files);
+      handleFileList([files]);
     }
   };
-
-  const handleCancel = () => handlePreviewVisible(false);
 
   const sensor = useSensor(PointerSensor, {
     activationConstraint: { distance: 10 },
@@ -182,24 +138,17 @@ export default ({
       const overIndex = fileList.findIndex((i) => i.url === over?.id);
       const newFileList = arrayMove(fileList, activeIndex, overIndex);
       handleFileList(newFileList);
-      const urlList = newFileList.map((item: any) => item.url);
-      onChange?.(urlList);
+      onChange?.(newFileList);
     }
   };
 
-  console.log(fileList);
-
   const initUploadProps: any = {
-    listType: 'picture-card',
-    action: OSSData?.host,
-    data: getExtraData,
-    maxCount: maxLength,
-    accept: 'image/*',
-    fileList: fileList,
+    customRequest,
+    maxCount: maxCount,
+    fileList,
     onChange: handleOnChange,
-    onPreview: handlePreview,
     onRemove: handleOnRemove,
-    beforeUpload,
+    accept,
     itemRender: (originNode, file) => (
       <DraggableUploadListItem originNode={originNode} file={file} />
     ),
@@ -208,26 +157,22 @@ export default ({
 
   return (
     <>
-      {showImgCrop ? (
+      {maxCount === 1 ? (
+        <Upload {...initUploadProps}>
+          {fileList.length < maxCount && children}
+        </Upload>
+      ) : (
         <DndContext sensors={[sensor]} onDragEnd={onDragEnd}>
           <SortableContext
             items={fileList.map((i) => i.url)}
-            strategy={rectSortingStrategy}
+            strategy={verticalListSortingStrategy}
           >
-            <ImgCrop rotationSlider quality={1} {...imgCropProps}>
-              <Upload {...initUploadProps}>
-                {fileList.length < maxLength && children}
-              </Upload>
-            </ImgCrop>
+            <Upload {...initUploadProps}>
+              {fileList.length < maxCount && children}
+            </Upload>
           </SortableContext>
         </DndContext>
-      ) : (
-        <Upload {...initUploadProps}>{children}</Upload>
       )}
-
-      <Modal open={previewVisible} footer={null} onCancel={handleCancel}>
-        <img alt="example" style={{ width: '100%' }} src={previewImage} />
-      </Modal>
     </>
   );
 };
