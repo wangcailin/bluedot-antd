@@ -1,28 +1,44 @@
-import type { ActionType, ProColumns } from '@ant-design/pro-components';
+import { ExportOutlined, PlusOutlined } from '@ant-design/icons';
+import { ActionType } from '@ant-design/pro-components';
 import { DragSortTable } from '@ant-design/pro-components';
-import { message } from 'antd';
-import { useRef } from 'react';
+import { Button, message } from 'antd';
+import { useEffect, useRef } from 'react';
 import React from 'react';
 
-export default ({
-  search=true, //是否支持搜索
-  pagination=true,//是否分页
-  rowKey="id",//rowKey
+interface DraggerComponentProps {
+  search?: boolean;
+  pagination?: boolean;
+  rowKey?: string;
+  reloadDataTime?: any;
+  headerTitle?: string;
+  columns?: any[];
+  queryRule?: () => Promise<any>;
+  addRule?: (values: any) => Promise<any>;
+  updateRule?: (data: any) => Promise<any>;
+  dragHandleRender?: () => React.ReactNode;
+  ModalForm?: any;
+}
+
+
+const DraggerTable: React.FC<DraggerComponentProps> = ({
+  reloadDataTime,//监听刷新子组件
   headerTitle, //标题
   columns, //列
   queryRule, //查询 排序url
+  addRule, //更新 排序url
   updateRule, //更新 排序url
   dragHandleRender,//拖动图标
+  ModalForm,//新增的组件
+  search=true, //是否支持搜索
+  pagination=true,//是否分页
+  rowKey="id",//rowKey
 }) => {
-  const request = async () => {
-    return queryRule().then((result) => {
-      console.log(result)
-      return result
-    });
-  };
-  console.log(pagination)
-  
+
   const actionRef = useRef<ActionType>();
+
+  useEffect(() => {
+    actionRef?.current?.reload(); 
+  }, [reloadDataTime]);
   
   const handleDragSortEnd = (newDataSource: any) => {
     console.log('排序后的数据', newDataSource);
@@ -45,10 +61,28 @@ export default ({
         rowKey={rowKey}
         search={search}
         pagination={pagination}
-        request={request}
+        request={queryRule}
         dragSortKey="sort"
         onDragSortEnd={handleDragSortEnd}
+        toolBarRender={() => [
+          <ModalForm
+            title="新建"
+            onFinish={async (values: any) => {
+              await addRule(values);
+              message.success('提交成功');
+              actionRef?.current?.reload();
+              return true;
+            }}
+            key="create"
+          >
+            <Button key="button" icon={<PlusOutlined />} type="primary">
+              新建
+            </Button>
+          </ModalForm>,
+        ]}
       />
     </>
   );
 };
+
+export default DraggerTable;
