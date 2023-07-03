@@ -1,51 +1,54 @@
-import { ProForm } from '@ant-design/pro-components';
 import { TreeSelect, message } from 'antd';
 import React, { useEffect, useState } from 'react';
 
-type QueryTreeFunc = () => Promise<any>;
-export default ({
-  queryTree,
-  num = 1,
-  name = 'category_id',
-  label = '分类',
-}: {
+type QueryTreeFunc = () => Promise<any[]>;
+
+interface TreeSelectProps {
   queryTree: QueryTreeFunc;
   num?: number;
-  name?: string;
-  label?: string;
+}
+const CustomTreeSelect: React.FC<TreeSelectProps> = ({
+  queryTree,
+  num = 1,
 }) => {
   //标签数据
-  const [treeData, setTreeData] = useState<any>();
-  const handleTreeSelectChange = (value: any) => {
-    if (value.length > num) {
+  const [treeData, setTreeData] = useState<any[]>([]);
+  const [value, setValue] = useState<any[]>([]);
+
+  const handleTreeSelectChange = (selectedValue: any[]) => {
+    if (selectedValue.length > num) {
       message.warning('最多只能选择' + num + '个!');
-      value.pop();
+      selectedValue.pop();
+      setValue([...selectedValue]);
       return;
     }
+    setValue(selectedValue);
   };
+
   useEffect(() => {
     queryTree().then((result: any) => {
       setTreeData(result);
     });
-  }, []);
+  }, [queryTree]);
 
   return (
     <>
-      <ProForm.Item name={name} label={label} rules={[{ required: true }]}>
-        <TreeSelect
-          showSearch
-          style={{ width: '100%' }}
-          treeData={treeData}
-          dropdownStyle={{ maxHeight: 400, overflow: 'auto' }}
-          placeholder="请选择"
-          allowClear
-          treeDefaultExpandAll
-          treeNodeFilterProp="name"
-          multiple={true}
-          fieldNames={{ label: 'name', value: 'id', children: 'children' }}
-          onChange={handleTreeSelectChange}
-        />
-      </ProForm.Item>
+      <TreeSelect
+        showSearch
+        style={{ width: '100%' }}
+        value={value}
+        treeData={treeData}
+        dropdownStyle={{ maxHeight: 400, overflow: 'auto' }}
+        placeholder="请选择"
+        allowClear
+        treeDefaultExpandAll
+        treeNodeFilterProp="name"
+        multiple={true}
+        fieldNames={{ label: 'name', value: 'id', children: 'children' }}
+        onChange={handleTreeSelectChange}
+      />
     </>
   );
 };
+
+export default CustomTreeSelect;
