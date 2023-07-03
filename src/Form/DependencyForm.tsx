@@ -1,7 +1,11 @@
-import { ProForm, ProFormDependency, ProFormList, ProFormSelect } from '@ant-design/pro-components';
-import { Upload } from '@bluedot-tech/bluedot-antd';
-import { Editor } from 'bluedot-antd';
-import { ProCard } from '@ant-design/pro-components';
+import {
+  ProCard,
+  ProForm,
+  ProFormDependency,
+  ProFormList,
+  ProFormSelect,
+} from '@ant-design/pro-components';
+import { Editor, Upload } from '@bluedot-tech/bluedot-antd';
 import React from 'react';
 
 export default ({
@@ -87,7 +91,10 @@ export default ({
                       } else if (fileType === 1) {
                         return (
                           <ProForm.Item name="fileurl">
-                            <Upload.File accept={filedoc} maxCount={filenumber} />
+                            <Upload.File
+                              accept={filedoc}
+                              maxCount={filenumber}
+                            />
                           </ProForm.Item>
                         );
                       }
@@ -99,10 +106,7 @@ export default ({
             if (typeUseMode === 2) {
               return (
                 <ProForm.Item name="content">
-                  <Editor.BraftEditor
-                    id="editor-with-color-picker"
-                    style={{ width: '100%', marginBottom: '30px' }}
-                  />
+                  <Editor.Quill />
                 </ProForm.Item>
               );
             }
