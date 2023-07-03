@@ -7,16 +7,13 @@ interface TreeSelectProps {
   queryTree: QueryTreeFunc;
   num?: number;
 }
-const CustomTreeSelect: React.FC<TreeSelectProps> = ({
-  queryTree,
-  num = 1,
-}) => {
+const CustomTreeSelect: React.FC<TreeSelectProps> = ({ queryTree, num }) => {
   //标签数据
   const [treeData, setTreeData] = useState<any[]>([]);
   const [value, setValue] = useState<any[]>([]);
 
   const handleTreeSelectChange = (selectedValue: any[]) => {
-    if (selectedValue.length > num) {
+    if (num !== undefined && selectedValue.length > num) {
       message.warning('最多只能选择' + num + '个!');
       selectedValue.pop();
       setValue([...selectedValue]);
