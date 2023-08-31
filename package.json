@@ -1,6 +1,6 @@
 {
   "name": "@bluedot-tech/bluedot-antd",
-  "version": "3.2.5",
+  "version": "3.2.6",
   "description": "bluedot-antd",
   "license": "MIT",
   "module": "dist/index.js",
