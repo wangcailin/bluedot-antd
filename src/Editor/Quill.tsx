@@ -14,7 +14,7 @@ export default ({ value, onChange, ...props }: any) => {
   console.log(value);
 
   return (
-    <div style={{ width: 390 }}>
+    <>
       <Toolbar quillRef={quillRef} />
       <ReactQuill
         ref={quillRef}
@@ -26,6 +26,6 @@ export default ({ value, onChange, ...props }: any) => {
         style={{ height: 500, width: 390 }}
         {...props}
       />
-    </div>
+    </>
   );
 };
