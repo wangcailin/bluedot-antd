@@ -23,7 +23,7 @@ export default ({ value, onChange, width=390, ...props }: any) => {
         onChange={(value) => {
           onChange?.(value);
         }}
-        style={{ height: 500, width: 390 }}
+        style={{ height: 500, width }}
         {...props}
       />
     </div>
