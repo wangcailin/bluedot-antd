@@ -3,7 +3,7 @@ import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import Toolbar from './Toolbar';
 
-export default ({ value, onChange, ...props }: any) => {
+export default ({ value, onChange, width=390, ...props }: any) => {
   const quillRef = useRef<HTMLInputElement>(null);
 
   const modules = {
@@ -14,7 +14,7 @@ export default ({ value, onChange, ...props }: any) => {
   console.log(value);
 
   return (
-    <>
+    <div style={{ width }}>
       <Toolbar quillRef={quillRef} />
       <ReactQuill
         ref={quillRef}
@@ -26,6 +26,6 @@ export default ({ value, onChange, ...props }: any) => {
         style={{ height: 500, width: 390 }}
         {...props}
       />
-    </>
+    </div>
   );
 };
